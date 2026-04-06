@@ -8,9 +8,9 @@ use syn::punctuated::Punctuated;
 
 /// The key-value collection parser
 #[proc_macro]
-pub fn map(input: TokenStream) -> TokenStream {
+pub fn parse_map(input: TokenStream) -> TokenStream {
     let Map { fields } = syn::parse_macro_input!(input as Map);
-    
+
     let list = fields.into_iter().map(|pair| {
         let (k, v) = (pair.key, pair.value);
         quote! { (#k, #v) }
@@ -21,13 +21,13 @@ pub fn map(input: TokenStream) -> TokenStream {
 
 /// The key-value collection
 struct Map {
-    pub fields: Punctuated::<Field, syn::Token![,]>,
+    pub fields: Punctuated<Field, syn::Token![,]>,
 }
 
 impl syn::parse::Parse for Map {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let fields = Punctuated::<Field, syn::Token![,]>::parse_terminated(input)?;
-        
+
         Ok(Map { fields })
     }
 }
@@ -47,14 +47,14 @@ impl syn::parse::Parse for Field {
         } else if input.peek(syn::Token![=>]) {
             input.parse::<syn::Token![=>]>()?;
         } else {
-            return Err(syn::Error::new(input.span(), "the expected separator is `:` or `=>` between key and value"));
+            return Err(syn::Error::new(
+                input.span(),
+                "the expected separator is `:` or `=>` between key and value",
+            ));
         }
 
         let value = input.parse()?;
-        
-        Ok(Field {
-            key,
-            value,
-        })
+
+        Ok(Field { key, value })
     }
 }

@@ -3,10 +3,10 @@ name = "macron-map"
 description = "The key-value collection parser"
 keywords = ["macros", "macro", "proc", "declarative"]
 categories = ["development-tools", "rust-patterns"]
-version = "0.1.1"
+version = "0.1.2"
 license = "MIT"
 authors = ["Bulat Sh. <t.me/fuderis>"]
-repository = "https://github.com/fuderis/rs-macron/tree/main/macron-input"
+repository = "https://github.com/fuderis/rs-macron/tree/main/macron-map"
 readme = "README.md"
 edition = "2021"
 

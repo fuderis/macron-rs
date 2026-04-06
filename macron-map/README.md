@@ -20,7 +20,7 @@ P.s.: More useful macros you can find [here](https://docs.rs/macron).
 ```rust
 let (k, v) = ("one", 1);
     
-let map = map! {
+let map = parse_map! {
     k => v,
     "two": 2,
     "three" => 3,
