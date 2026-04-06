@@ -3,7 +3,7 @@ name = "macron"
 description = "Comprehensive Rust macros toolkit for everyday development tasks. Includes convenient string formatting (str!), regex pattern matching (re!), streamlined collection creation, and custom derive macros for Display, Error, From, and Into traits. Boost your productivity with intuitive syntax and simplify your codebase while maintaining performance and safety. Perfect for both small projects and large-scale applications."
 keywords = ["macros", "macro", "proc", "derive", "declarative"]
 categories = ["development-tools", "rust-patterns"]
-version = "0.1.14"
+version = "0.1.15"
 license = "MIT"
 authors = ["Bulat Sh. <t.me/fuderis>"]
 repository = "https://github.com/fuderis/rs-macron"
@@ -12,8 +12,7 @@ edition = "2021"
 
 [dependencies]
 macron-path = { version = "0.1.3", optional = true }
-macron-map = { version = "0.1.1", optional = true }
-macron-collections = { version = "0.1.5", optional = true }
+macron-collections = { version = "0.1.6", optional = true }
 macron-impl-display = { version = "0.1.1", optional = true }
 macron-impl-error = { version = "0.1.2", optional = true }
 macron-impl-from = { version = "0.1.1", optional = true }
@@ -28,5 +27,5 @@ full = ["path", "string", "input", "collections", "derive"]
 path = ["dep:macron-path"]
 string = ["dep:macron-str", "dep:macron-regex"]
 input = ["dep:macron-input", "dep:macron-inputln"]
-collections = ["dep:macron-map", "dep:macron-collections"]
+collections = ["dep:macron-collections"]
 derive = ["dep:macron-impl-display", "dep:macron-impl-error", "dep:macron-impl-from", "dep:macron-impl-into"]

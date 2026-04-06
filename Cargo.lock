@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "macron"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "macron-collections",
  "macron-impl-display",
@@ -13,7 +13,6 @@ dependencies = [
  "macron-impl-into",
  "macron-input",
  "macron-inputln",
- "macron-map",
  "macron-path",
  "macron-regex",
  "macron-str",
@@ -21,9 +20,9 @@ dependencies = [
 
 [[package]]
 name = "macron-collections"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbaeed222b75e6caeccd2c545ee6f37042313ad72c02eb795ebcfefd28d6c1a2"
+checksum = "c911a66913c3cbb564a7b9cf21be7a506d040f87ad197c51782a6f0670428571"
 dependencies = [
  "macron-map",
 ]
@@ -95,9 +94,9 @@ dependencies = [
 
 [[package]]
 name = "macron-map"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8fd1e10d314ee9aa76777f1412185fbf51844a438867107f3b617aa2eb03b53"
+checksum = "b61724606afa0d8cdc09cd97154a6cafd6934220bb2073c395f7db48d8e9985c"
 dependencies = [
  "quote",
  "syn",

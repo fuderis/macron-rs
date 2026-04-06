@@ -1,8 +1,9 @@
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
+pub mod prelude;
 
-/// A dynamic error type
+/// The dynamic error type
 pub type DynError = Box<dyn std::error::Error + Send + Sync + 'static>;
-/// A useful result alias
+/// The useful result alias
 pub type Result<T> = std::result::Result<T, DynError>;
 
 #[cfg(any(feature = "path", feature = "full"))]
@@ -20,7 +21,7 @@ pub use macron_inputln::inputln;
 
 #[cfg(any(feature = "collections", feature = "full"))]
 pub use macron_collections::{
-    binary_heap, btree_map, btree_set, hash_map, hash_set, linked_list, map, vec_deque,
+    binary_heap, btree_map, btree_set, hash_map, hash_set, linked_list, parse_map, vec_deque,
 };
 
 #[cfg(any(feature = "derive", feature = "full"))]
