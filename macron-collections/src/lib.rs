@@ -1,7 +1,7 @@
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
 pub use macron_map;
-pub use macron_map::map;
+pub use macron_map::parse_map;
 
 pub mod vec_deque;
 
