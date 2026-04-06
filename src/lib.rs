@@ -1,11 +1,6 @@
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 pub mod prelude;
 
-/// The dynamic error type
-pub type DynError = Box<dyn std::error::Error + Send + Sync + 'static>;
-/// The useful result alias
-pub type Result<T> = std::result::Result<T, DynError>;
-
 #[cfg(any(feature = "path", feature = "full"))]
 pub use macron_path::path;
 
