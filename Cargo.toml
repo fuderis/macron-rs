@@ -5,8 +5,8 @@ keywords = ["macros", "macro", "proc", "derive", "declarative"]
 categories = ["development-tools", "rust-patterns"]
 version = "0.1.18"
 license = "MIT"
-authors = ["Bulat Sh. <t.me/fuderis>"]
-repository = "https://github.com/fuderis/rs-macron"
+authors = ["Bulat Sh. <synapdrake@ya.ru>"]
+repository = "https://github.com/fuderis/macron-rs"
 readme = "README.md"
 edition = "2021"
 

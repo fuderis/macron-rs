@@ -1,4 +1,4 @@
-[![github]](https://github.com/fuderis/rs-macron)&ensp;
+[![github]](https://github.com/fuderis/macron-rs)&ensp;
 [![crates-io]](https://crates.io/crates/macron)&ensp;
 [![docs-rs]](https://docs.rs/macron)
 
@@ -45,13 +45,9 @@ Empower your Rust development with this versatile set of macros, designed to mak
 If you need all of this macros, then use feature '_full_'.
 
 
-## Licensing:
+## License & Feedback:
 
-Distributed under the _MIT license_.
+> This library distributed under the [MIT](https://github.com/fuderis/fudes-rs/blob/main/LICENSE.md) license.
 
-
-## Feedback:
-
-You can contact me via GitHub or send a message to my _Telegram_ [@fuderis](https://t.me/fuderis).
-
+You can contact me via [GitHub](https://github.com/fuderis) or send a message to my [E-Mail](mailto:synapdrake@ya.ru).
 This library is actively evolving, and your suggestions and feedback are always welcome!
