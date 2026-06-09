@@ -1,0 +1,21 @@
+[package]
+name = "macron-impl-display"
+description = "The implementation of trait Display"
+keywords = ["macros", "macro", "proc", "derive"]
+categories = ["development-tools", "rust-patterns"]
+version = "0.2.0"
+license = "MIT"
+authors = ["Bulat Sh. <t.me/fuderis>"]
+repository = "https://github.com/fuderis/macron-rs/tree/main/crates/impl-display"
+readme = "README.md"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote.workspace = true
+syn.workspace = true
+proc-macro2.workspace = true
+darling.workspace = true
+heck = "0.5.0"

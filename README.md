@@ -12,7 +12,6 @@ Comprehensive Rust macros toolkit for everyday development tasks. Includes conve
 
 Empower your Rust development with this versatile set of macros, designed to make common tasks easier and more enjoyable.
 
-
 ## Navigation:
 
 #### File path (feature '_path_'):
@@ -44,10 +43,9 @@ Empower your Rust development with this versatile set of macros, designed to mak
 
 If you need all of this macros, then use feature '_full_'.
 
-
 ## License & Feedback:
 
-> This library distributed under the [MIT](https://github.com/fuderis/fudes-rs/blob/main/LICENSE.md) license.
+> This library distributed under the [MIT](https://github.com/fuderis/macron-rs/blob/main/LICENSE.md) license.
 
 You can contact me via [GitHub](https://github.com/fuderis) or send a message to my [E-Mail](mailto:synapdrake@ya.ru).
 This library is actively evolving, and your suggestions and feedback are always welcome!

@@ -1,0 +1,19 @@
+[package]
+name = "macron-impl-from"
+description = "The implementation of trait From"
+keywords = ["macros", "macro", "proc", "derive"]
+categories = ["development-tools", "rust-patterns"]
+version = "0.2.0"
+license = "MIT"
+authors = ["Bulat Sh. <t.me/fuderis>"]
+repository = "https://github.com/fuderis/macron-rs/tree/main/crates/impl-from"
+readme = "README.md"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote.workspace = true
+syn.workspace = true
+proc-macro2.workspace = true

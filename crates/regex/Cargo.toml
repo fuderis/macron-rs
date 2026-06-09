@@ -1,0 +1,17 @@
+[package]
+name = "macron-regex"
+description = "Creates a new instance of Regex"
+keywords = ["macros", "macro", "declarative"]
+categories = ["development-tools", "rust-patterns"]
+version = "0.1.1"
+license = "MIT"
+authors = ["Bulat Sh. <t.me/fuderis>"]
+repository = "https://github.com/fuderis/macron-rs/tree/main/crates/input"
+readme = "README.md"
+edition = "2021"
+
+[dependencies]
+regex = { version = "1.12.3", optional = true }
+
+[features]
+regex = ["dep:regex"]

@@ -1,0 +1,14 @@
+[package]
+name = "macron-collections"
+description = "Creates a new instance of std collections: HashMap, HashSet, BTreeMap, BTreeSet, VecDeque, LinkedList and BinaryHeap"
+keywords = ["macros", "macro", "declarative"]
+categories = ["development-tools", "rust-patterns"]
+version = "0.1.6"
+license = "MIT"
+authors = ["Bulat Sh. <t.me/fuderis>"]
+repository = "https://github.com/fuderis/macron-rs/tree/main/crates/collections"
+readme = "README.md"
+edition = "2021"
+
+[dependencies]
+macron-map = "0.1.2"
