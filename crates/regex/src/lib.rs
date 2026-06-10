@@ -4,23 +4,27 @@
 pub use regex::{self, Match, Regex};
 
 /// Creates a new instance of [Regex](https://docs.rs/regex/latest/regex/struct.Regex.html)
+#[cfg(feature = "regex")]
 #[macro_export]
 macro_rules! re {
     ($($tokens:tt)*) => {{
-        #[cfg(feature = "regex")] {
-            $crate::regex::Regex::new(&::std::format!($($tokens)*)).unwrap()
-        }
-        #[cfg(not(feature = "regex"))] {
-            ::regex::Regex::new(&::std::format!($($tokens)*)).unwrap()
-        }
+        $crate::regex::Regex::new(&::std::format!($($tokens)*)).unwrap()
     }};
 
     ($expr:expr) => {{
-        #[cfg(feature = "regex")] {
-            $crate::regex::Regex::new(&::std::format!($expr)).unwrap()
-        }
-        #[cfg(not(feature = "regex"))] {
-            ::regex::Regex::new(&::std::format!($expr)).unwrap()
-        }
+        $crate::regex::Regex::new(&::std::format!($expr)).unwrap()
+    }};
+}
+
+/// Creates a new instance of [Regex](https://docs.rs/regex/latest/regex/struct.Regex.html)
+#[cfg(not(feature = "regex"))]
+#[macro_export]
+macro_rules! re {
+    ($($tokens:tt)*) => {{
+        ::regex::Regex::new(&::std::format!($($tokens)*)).unwrap()
+    }};
+
+    ($expr:expr) => {{
+        ::regex::Regex::new(&::std::format!($expr)).unwrap()
     }};
 }

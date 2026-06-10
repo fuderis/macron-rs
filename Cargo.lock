@@ -81,7 +81,7 @@ dependencies = [
  "macron-input 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "macron-inputln 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "macron-path 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "macron-regex 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "macron-regex 0.1.1",
  "macron-str 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -264,15 +264,15 @@ dependencies = [
 [[package]]
 name = "macron-regex"
 version = "0.1.1"
-dependencies = [
- "regex",
-]
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53a4ae6296747443f2531785d03f7572f2e3d20f73cc2b0170b0225cbccbcc33"
 
 [[package]]
 name = "macron-regex"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53a4ae6296747443f2531785d03f7572f2e3d20f73cc2b0170b0225cbccbcc33"
+version = "0.1.2"
+dependencies = [
+ "regex",
+]
 
 [[package]]
 name = "macron-str"
