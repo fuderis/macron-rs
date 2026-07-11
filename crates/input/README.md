@@ -12,8 +12,7 @@ Reads user input lines from the console.
 
 > See more macros: [docs](https://docs.rs/macron), [repository](https://github.com/fuderis/macron-rs).
 
-
-## Examples:
+## Examples
 
 ```rust
 let mut input = input!("Enter in order '0', '1', '2': ");
@@ -25,9 +24,9 @@ for i in 0..=2 {
 }
 ```
 
-## License & Feedback:
+## License & Feedback
 
-> This library distributed under the [MIT](https://github.com/fuderis/macron-rs/blob/main/LICENSE.md) license.
+> This library is distributed under the [MIT](https://github.com/fuderis/macron-rs/blob/main/LICENSE.md) license.
 
 You can contact me via [GitHub](https://github.com/fuderis) or send a message to my [E-Mail](mailto:synapdrake@ya.ru).
 This library is actively evolving, and your suggestions and feedback are always welcome!

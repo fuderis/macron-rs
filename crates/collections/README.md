@@ -12,7 +12,7 @@ Creates a new instance of std collections: HashMap, HashSet, BTreeMap, BTreeSet,
 
 > See more macros: [docs](https://docs.rs/macron), [repository](https://github.com/fuderis/macron-rs).
 
-## Examples:
+## Examples
 
 **VecDeque**
 ```rust
@@ -89,9 +89,9 @@ assert_eq!(list.pop_front(), Some(10));
 assert_eq!(list.pop_back(), Some(30));
 ```
 
-## License & Feedback:
+## License & Feedback
 
-> This library distributed under the [MIT](https://github.com/fuderis/macron-rs/blob/main/LICENSE.md) license.
+> This library is distributed under the [MIT](https://github.com/fuderis/macron-rs/blob/main/LICENSE.md) license.
 
 You can contact me via [GitHub](https://github.com/fuderis) or send a message to my [E-Mail](mailto:synapdrake@ya.ru).
 This library is actively evolving, and your suggestions and feedback are always welcome!

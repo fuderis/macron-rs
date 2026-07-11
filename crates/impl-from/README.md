@@ -12,7 +12,7 @@ The implementation of trait [From](std::convert::From).
 
 > See more macros: [docs](https://docs.rs/macron), [repository](https://github.com/fuderis/macron-rs).
 
-## Examples:
+## Examples
 
 ### Struct
 ```rust
@@ -50,9 +50,9 @@ assert_eq!(Value::Null, ().into());
 assert_eq!(Value::String("test".to_string()), "test".into());
 ```
 
-## License & Feedback:
+## License & Feedback
 
-> This library distributed under the [MIT](https://github.com/fuderis/macron-rs/blob/main/LICENSE.md) license.
+> This library is distributed under the [MIT](https://github.com/fuderis/macron-rs/blob/main/LICENSE.md) license.
 
 You can contact me via [GitHub](https://github.com/fuderis) or send a message to my [E-Mail](mailto:synapdrake@ya.ru).
 This library is actively evolving, and your suggestions and feedback are always welcome!
