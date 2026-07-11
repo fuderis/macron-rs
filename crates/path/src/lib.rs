@@ -14,7 +14,18 @@ pub fn path(input: TokenStream) -> TokenStream {
 
     let Format { expr, args } = syn::parse_macro_input!(input as Format);
 
-    // prepare the raw string expression: either a formatted literal or a passed expression
+    if args.is_none() {
+        if let syn::Expr::Lit(syn::ExprLit {
+            lit: syn::Lit::Str(lit_str),
+            ..
+        }) = &expr
+        {
+            if let Some(static_path_tokens) = try_parse_static_path(&lit_str.value()) {
+                return static_path_tokens.into();
+            }
+        }
+    }
+
     let raw_expr = if let syn::Expr::Lit(syn::ExprLit {
         lit: syn::Lit::Str(lit_str),
         ..
@@ -29,7 +40,6 @@ pub fn path(input: TokenStream) -> TokenStream {
         quote! { (#expr).to_string() }
     };
 
-    // unified cross-platform path resolution engine
     quote! {{
         let path_raw = #raw_expr;
         let path_str: &str = path_raw.as_ref();
@@ -37,7 +47,6 @@ pub fn path(input: TokenStream) -> TokenStream {
         if path_str.starts_with('$') || path_str.starts_with('~') {
             let mut path_normalized = path_str.replace("\\", "/");
 
-            // handle tilde home directory aliases right away
             if path_normalized == "~" {
                 path_normalized = "$home".to_string();
             } else if path_normalized.starts_with("~/") {
@@ -45,10 +54,8 @@ pub fn path(input: TokenStream) -> TokenStream {
             }
 
             if path_normalized == "$" {
-                // return current executable path
                 ::std::env::current_exe().expect("Failed to get executable path")
             } else if path_normalized.starts_with("$/") {
-                // return parent directory of the executable
                 let rest = &path_normalized[2..];
                 let mut p = ::std::env::current_exe()
                     .expect("Failed to get executable path")
@@ -60,7 +67,6 @@ pub fn path(input: TokenStream) -> TokenStream {
                 }
                 p
             } else {
-                // parse the prefix token (e.g., "$config$/settings.toml" -> "config$")
                 let token_end = path_normalized.find('/').unwrap_or(path_normalized.len());
                 let token = &path_normalized[1..token_end];
                 let rest = if token_end < path_normalized.len() { &path_normalized[token_end + 1..] } else { "" };
@@ -72,9 +78,6 @@ pub fn path(input: TokenStream) -> TokenStream {
                 };
 
                 let mut base = match key {
-                    // Linux: /home/user | /home/user/.ovsy
-                    // macOS: /Users/user | /Users/user/.ovsy
-                    // Windows: C:\Users\user | C:\Users\user\ovsy
                     "home" => {
                         #[cfg(target_os = "windows")] {
                             let mut p = ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found");
@@ -87,10 +90,26 @@ pub fn path(input: TokenStream) -> TokenStream {
                             p
                         }
                     }
-
-                    // Linux: ~/.config | ~/.config/ovsy
-                    // macOS: ~/Library/Application Support | ~/Library/Application Support/ovsy
-                    // Windows: %APPDATA% | %APPDATA%\ovsy\config
+                    "ssh" => {
+                        #[cfg(target_os = "windows")] {
+                            let mut p = ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found");
+                            p.push(".ssh");
+                            if has_app { p.push(APP_NAME); }
+                            p
+                        }
+                        #[cfg(target_os = "macos")] {
+                            let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found");
+                            p.push(".ssh");
+                            if has_app { p.push(APP_NAME); }
+                            p
+                        }
+                        #[cfg(all(unix, not(target_os = "macos")))] {
+                            let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found");
+                            p.push(".ssh");
+                            if has_app { p.push(::std::format!(".{}", APP_NAME)); }
+                            p
+                        }
+                    }
                     "config" => {
                         #[cfg(target_os = "windows")] {
                             let mut p = ::std::env::var("APPDATA").map(::std::path::PathBuf::from).expect("APPDATA not found");
@@ -110,10 +129,6 @@ pub fn path(input: TokenStream) -> TokenStream {
                             p
                         }
                     }
-
-                    // Linux: ~/.local/share | ~/.local/share/ovsy
-                    // macOS: ~/Library/Application Support | ~/Library/Application Support/ovsy
-                    // Windows: %LOCALAPPDATA% | %LOCALAPPDATA%\ovsy\data
                     "share" => {
                         #[cfg(target_os = "windows")] {
                             let mut p = ::std::env::var("LOCALAPPDATA").map(::std::path::PathBuf::from).expect("LOCALAPPDATA not found");
@@ -133,10 +148,6 @@ pub fn path(input: TokenStream) -> TokenStream {
                             p
                         }
                     }
-
-                    // Linux: ~/.cache | ~/.cache/ovsy
-                    // macOS: ~/Library/Caches | ~/Library/Caches/ovsy
-                    // Windows: %LOCALAPPDATA% | %LOCALAPPDATA%\ovsy\cache
                     "cache" => {
                         #[cfg(target_os = "windows")] {
                             let mut p = ::std::env::var("LOCALAPPDATA").map(::std::path::PathBuf::from).expect("LOCALAPPDATA not found");
@@ -156,18 +167,11 @@ pub fn path(input: TokenStream) -> TokenStream {
                             p
                         }
                     }
-
-                    // Linux/macOS: /tmp | /tmp/ovsy
-                    // Windows: %LOCALAPPDATA%\Temp | %LOCALAPPDATA%\Temp\ovsy
                     "temp" => {
                         let mut p = ::std::env::temp_dir();
                         if has_app { p.push(APP_NAME); }
                         p
                     }
-
-                    // Linux: /opt | /opt/ovsy
-                    // macOS: /Applications | /Applications/ovsy
-                    // Windows: %PROGRAMFILES% | %PROGRAMFILES%\ovsy
                     "global" => {
                         #[cfg(target_os = "windows")] {
                             let global_p = ::std::env::var("PROGRAMFILES").map(::std::path::PathBuf::from).expect("PROGRAMFILES not found");
@@ -194,80 +198,39 @@ pub fn path(input: TokenStream) -> TokenStream {
                             } else { global_p }
                         }
                     }
-
-                    // Linux: ~/.local/opt | ~/.local/opt/ovsy
-                    // macOS: ~/Applications | ~/Applications/ovsy
-                    // Windows: %LOCALAPPDATA%\Programs | %LOCALAPPDATA%\Programs\ovsy
                     "local" => {
                         #[cfg(target_os = "windows")] {
-                            let mut p = ::std::env::var("LOCALAPPDATA")
-                                .map(|l| ::std::path::PathBuf::from(l).join("Programs"))
-                                .expect("LOCALAPPDATA not found");
+                            let mut p = ::std::env::var("LOCALAPPDATA").map(|l| ::std::path::PathBuf::from(l).join("Programs")).expect("LOCALAPPDATA not found");
                             if has_app { p.push(APP_NAME); }
                             p
                         }
                         #[cfg(target_os = "macos")] {
-                            let mut p = ::std::env::var("HOME")
-                                .map(|h| ::std::path::PathBuf::from(h).join("Applications"))
-                                .expect("HOME not found");
+                            let mut p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join("Applications")).expect("HOME not found");
                             if has_app { p.push(APP_NAME); }
                             p
                         }
                         #[cfg(all(unix, not(target_os = "macos")))] {
-                            let mut p = ::std::env::var("HOME")
-                                .map(|h| ::std::path::PathBuf::from(h).join(".local/opt"))
-                                .expect("HOME not found");
+                            let mut p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/opt")).expect("HOME not found");
                             if has_app { p.push(APP_NAME); }
                             p
                         }
                     }
-
-                    // Linux/macOS/Windows: ~/Downloads | ~/Downloads/ovsy
-                    "downloads" => {
+                    "downloads" | "documents" | "music" | "pictures" => {
+                        let dir_name = match key {
+                            "downloads" => "Downloads",
+                            "documents" => "Documents",
+                            "music" => "Music",
+                            "pictures" => "Pictures",
+                            _ => unreachable!(),
+                        };
                         let mut p = {
                             #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
                             #[cfg(not(target_os = "windows"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
                         };
-                        p.push("Downloads");
+                        p.push(dir_name);
                         if has_app { p.push(APP_NAME); }
                         p
                     }
-
-                    // Linux/macOS/Windows: ~/Documents | ~/Documents/ovsy
-                    "documents" => {
-                        let mut p = {
-                            #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
-                            #[cfg(not(target_os = "windows"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
-                        };
-                        p.push("Documents");
-                        if has_app { p.push(APP_NAME); }
-                        p
-                    }
-
-                    // Linux/macOS/Windows: ~/Music | ~/Music/ovsy
-                    "music" => {
-                        let mut p = {
-                            #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
-                            #[cfg(not(target_os = "windows"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
-                        };
-                        p.push("Music");
-                        if has_app { p.push(APP_NAME); }
-                        p
-                    }
-
-                    // Linux/macOS/Windows: ~/Pictures | ~/Pictures/ovsy
-                    "pictures" => {
-                        let mut p = {
-                            #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
-                            #[cfg(not(target_os = "windows"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
-                        };
-                        p.push("Pictures");
-                        if has_app { p.push(APP_NAME); }
-                        p
-                    }
-
-                    // Linux/Windows: ~/Videos | ~/Videos/ovsy
-                    // macOS: ~/Movies | ~/Movies/ovsy
                     "videos" => {
                         let mut p = {
                             #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
@@ -278,7 +241,6 @@ pub fn path(input: TokenStream) -> TokenStream {
                         if has_app { p.push(APP_NAME); }
                         p
                     }
-
                     _ => panic!("Unknown path prefix: ${}", key),
                 };
 
@@ -290,8 +252,230 @@ pub fn path(input: TokenStream) -> TokenStream {
         } else {
             ::std::path::PathBuf::from(path_str)
         }
-    }}
-    .into()
+    }}.into()
+}
+
+fn try_parse_static_path(path_str: &str) -> Option<TokenStream2> {
+    if !path_str.starts_with('$') && !path_str.starts_with('~') {
+        return Some(quote! { ::std::path::PathBuf::from(#path_str) });
+    }
+
+    let mut path_normalized = path_str.replace("\\", "/");
+
+    if path_normalized == "~" {
+        path_normalized = "$home".to_string();
+    } else if path_normalized.starts_with("~/") {
+        path_normalized = ::std::format!("$home/{}", &path_normalized[2..]);
+    }
+
+    if path_normalized == "$" {
+        return Some(quote! { ::std::env::current_exe().expect("Failed to get executable path") });
+    } else if path_normalized.starts_with("$/") {
+        let rest = path_normalized[2..].to_string();
+        return Some(quote! {{
+            let mut p = ::std::env::current_exe()
+                .expect("Failed to get executable path")
+                .parent()
+                .map(::std::path::PathBuf::from)
+                .expect("Failed to get executable directory");
+            if !#rest.is_empty() {
+                p.push(#rest);
+            }
+            p
+        }});
+    }
+
+    let token_end = path_normalized.find('/').unwrap_or(path_normalized.len());
+    let token = &path_normalized[1..token_end];
+    let rest = if token_end < path_normalized.len() {
+        &path_normalized[token_end + 1..]
+    } else {
+        ""
+    };
+
+    let (key, has_app) = if token.ends_with('$') {
+        (&token[..token.len() - 1], true)
+    } else {
+        (token, false)
+    };
+
+    let base_tokens = match key {
+        "home" => quote! {
+            #[cfg(target_os = "windows")] {
+                let mut p = ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(not(target_os = "windows"))] {
+                let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found");
+                if #has_app { p.push(::std::format!(".{}", APP_NAME)); }
+                p
+            }
+        },
+        "ssh" => quote! {
+            #[cfg(target_os = "windows")] {
+                let mut p = ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found");
+                p.push(".ssh");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(target_os = "macos")] {
+                let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found");
+                p.push(".ssh");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(all(unix, not(target_os = "macos")))] {
+                let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found");
+                p.push(".ssh");
+                if #has_app { p.push(::std::format!(".{}", APP_NAME)); }
+                p
+            }
+        },
+        "config" => quote! {
+            #[cfg(target_os = "windows")] {
+                let mut p = ::std::env::var("APPDATA").map(::std::path::PathBuf::from).expect("APPDATA not found");
+                if #has_app { p.push(APP_NAME); p.push("config"); }
+                p
+            }
+            #[cfg(target_os = "macos")] {
+                let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found").join("Library/Application Support");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(all(unix, not(target_os = "macos")))] {
+                let mut p = ::std::env::var("XDG_CONFIG_HOME").map(::std::path::PathBuf::from)
+                    .or_else(|_| ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".config")))
+                    .expect("Failed to resolve config directory");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+        },
+        "share" => quote! {
+            #[cfg(target_os = "windows")] {
+                let mut p = ::std::env::var("LOCALAPPDATA").map(::std::path::PathBuf::from).expect("LOCALAPPDATA not found");
+                if #has_app { p.push(APP_NAME); p.push("data"); }
+                p
+            }
+            #[cfg(target_os = "macos")] {
+                let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found").join("Library/Application Support");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(all(unix, not(target_os = "macos")))] {
+                let mut p = ::std::env::var("XDG_DATA_HOME").map(::std::path::PathBuf::from)
+                    .or_else(|_| ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/share")))
+                    .expect("Failed to resolve data directory");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+        },
+        "cache" => quote! {
+            #[cfg(target_os = "windows")] {
+                let mut p = ::std::env::var("LOCALAPPDATA").map(::std::path::PathBuf::from).expect("LOCALAPPDATA not found");
+                if #has_app { p.push(APP_NAME); p.push("cache"); }
+                p
+            }
+            #[cfg(target_os = "macos")] {
+                let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found").join("Library/Caches");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(all(unix, not(target_os = "macos")))] {
+                let mut p = ::std::env::var("XDG_CACHE_HOME").map(::std::path::PathBuf::from)
+                    .or_else(|_| ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".cache")))
+                    .expect("Failed to resolve cache directory");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+        },
+        "temp" => quote! {{
+            let mut p = ::std::env::temp_dir();
+            if #has_app { p.push(APP_NAME); }
+            p
+        }},
+        "global" => quote! {
+            #[cfg(target_os = "windows")] {
+                let global_p = ::std::env::var("PROGRAMFILES").map(::std::path::PathBuf::from).expect("PROGRAMFILES not found");
+                let local_p = ::std::env::var("LOCALAPPDATA").map(|l| ::std::path::PathBuf::from(l).join("Programs")).expect("LOCALAPPDATA not found");
+                if #has_app {
+                    let mut p = global_p.join(APP_NAME);
+                    if p.exists() { p } else { local_p.join(APP_NAME) }
+                } else { global_p }
+            }
+            #[cfg(target_os = "macos")] {
+                let global_p = ::std::path::PathBuf::from("/Applications");
+                let local_p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join("Applications")).expect("HOME not found");
+                if #has_app {
+                    let mut p = global_p.join(APP_NAME);
+                    if p.exists() || global_p.join(::std::format!("{}.app", APP_NAME)).exists() { p } else { local_p.join(APP_NAME) }
+                } else { global_p }
+            }
+            #[cfg(all(unix, not(target_os = "macos")))] {
+                let global_p = ::std::path::PathBuf::from("/opt");
+                let local_p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/opt")).expect("HOME not found");
+                if #has_app {
+                    let mut p = global_p.join(APP_NAME);
+                    if p.exists() { p } else { local_p.join(APP_NAME) }
+                } else { global_p }
+            }
+        },
+        "local" => quote! {
+            #[cfg(target_os = "windows")] {
+                let mut p = ::std::env::var("LOCALAPPDATA").map(|l| ::std::path::PathBuf::from(l).join("Programs")).expect("LOCALAPPDATA not found");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(target_os = "macos")] {
+                let mut p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join("Applications")).expect("HOME not found");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(all(unix, not(target_os = "macos")))] {
+                let mut p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/opt")).expect("HOME not found");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+        },
+        "downloads" | "documents" | "music" | "pictures" => {
+            let dir_name = match key {
+                "downloads" => "Downloads",
+                "documents" => "Documents",
+                "music" => "Music",
+                "pictures" => "Pictures",
+                _ => unreachable!(),
+            };
+            quote! {{
+                let mut p = {
+                    #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
+                    #[cfg(not(target_os = "windows"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
+                };
+                p.push(#dir_name);
+                if #has_app { p.push(APP_NAME); }
+                p
+            }}
+        }
+        "videos" => quote! {{
+            let mut p = {
+                #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
+                #[cfg(not(target_os = "windows"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
+            };
+            #[cfg(target_os = "macos")] { p.push("Movies"); }
+            #[cfg(not(target_os = "macos"))] { p.push("Videos"); }
+            if #has_app { p.push(APP_NAME); }
+            p
+        }},
+        _ => panic!("Unknown path prefix: ${}", key),
+    };
+
+    let rest_str = rest.to_string();
+    Some(quote! {{
+        let mut base = { #base_tokens };
+        if !#rest_str.is_empty() {
+            base.push(#rest_str);
+        }
+        base
+    }})
 }
 
 struct Format {
