@@ -14,36 +14,18 @@ pub fn path(input: TokenStream) -> TokenStream {
 
     let Format { expr, args } = syn::parse_macro_input!(input as Format);
 
-    if args.is_none() {
-        if let syn::Expr::Lit(syn::ExprLit {
-            lit: syn::Lit::Str(lit_str),
-            ..
-        }) = &expr
-        {
-            if let Some(static_path_tokens) = try_parse_static_path(&lit_str.value()) {
-                return static_path_tokens.into();
-            }
-        }
-    }
-
-    let raw_expr = if let syn::Expr::Lit(syn::ExprLit {
+    if let syn::Expr::Lit(syn::ExprLit {
         lit: syn::Lit::Str(lit_str),
         ..
     }) = &expr
     {
-        if let Some(args) = args {
-            quote! { ::std::format!(#lit_str #args) }
-        } else {
-            quote! { ::std::format!(#lit_str) }
-        }
-    } else {
-        quote! { (#expr).to_string() }
-    };
+        return parse_literal_path(lit_str, args).into();
+    }
 
     quote! {{
-        let path_raw = #raw_expr;
-        let path_str: &str = path_raw.as_ref();
-
+        let path_owner = #expr;
+        let path_str: &str = path_owner.as_ref();
+        
         if path_str.starts_with('$') || path_str.starts_with('~') {
             let mut path_normalized = path_str.replace("\\", "/");
 
@@ -234,7 +216,7 @@ pub fn path(input: TokenStream) -> TokenStream {
                     "videos" => {
                         let mut p = {
                             #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
-                            #[cfg(not(target_os = "windows"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
+                            #[cfg(not(target_os = "macos"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
                         };
                         #[cfg(target_os = "macos")] { p.push("Movies"); }
                         #[cfg(not(target_os = "macos"))] { p.push("Videos"); }
@@ -255,12 +237,26 @@ pub fn path(input: TokenStream) -> TokenStream {
     }}.into()
 }
 
-fn try_parse_static_path(path_str: &str) -> Option<TokenStream2> {
-    if !path_str.starts_with('$') && !path_str.starts_with('~') {
-        return Some(quote! { ::std::path::PathBuf::from(#path_str) });
+fn parse_literal_path(lit_str: &syn::LitStr, args: Option<TokenStream2>) -> TokenStream2 {
+    let path_raw = lit_str.value();
+
+    let make_rest_expr = |rest_str: &str| {
+        let has_brackets = rest_str.contains(&['{', '}'][..]);
+        if args.is_some() {
+            quote! { ::std::format!(#rest_str #args) }
+        } else if has_brackets {
+            quote! { ::std::format!(#rest_str) }
+        } else {
+            quote! { #rest_str }
+        }
+    };
+
+    if !path_raw.starts_with('$') && !path_raw.starts_with('~') {
+        let expr = make_rest_expr(&path_raw);
+        return quote! { ::std::path::PathBuf::from(#expr) };
     }
 
-    let mut path_normalized = path_str.replace("\\", "/");
+    let mut path_normalized = path_raw.replace("\\", "/");
 
     if path_normalized == "~" {
         path_normalized = "$home".to_string();
@@ -269,20 +265,21 @@ fn try_parse_static_path(path_str: &str) -> Option<TokenStream2> {
     }
 
     if path_normalized == "$" {
-        return Some(quote! { ::std::env::current_exe().expect("Failed to get executable path") });
+        return quote! { ::std::env::current_exe().expect("Failed to get executable path") };
     } else if path_normalized.starts_with("$/") {
-        let rest = path_normalized[2..].to_string();
-        return Some(quote! {{
+        let rest_expr = make_rest_expr(&path_normalized[2..]);
+        return quote! {{
             let mut p = ::std::env::current_exe()
                 .expect("Failed to get executable path")
                 .parent()
                 .map(::std::path::PathBuf::from)
                 .expect("Failed to get executable directory");
-            if !#rest.is_empty() {
-                p.push(#rest);
+            let rest = #rest_expr;
+            if !rest.is_empty() {
+                p.push(rest);
             }
             p
-        }});
+        }};
     }
 
     let token_end = path_normalized.find('/').unwrap_or(path_normalized.len());
@@ -299,16 +296,25 @@ fn try_parse_static_path(path_str: &str) -> Option<TokenStream2> {
         (token, false)
     };
 
+    let app_push = if has_app {
+        quote! {
+            #[cfg(target_os = "windows")] { p.push(APP_NAME); }
+            #[cfg(not(target_os = "windows"))] { p.push(::std::format!(".{}", APP_NAME)); }
+        }
+    } else {
+        quote! {}
+    };
+
     let base_tokens = match key {
         "home" => quote! {
             #[cfg(target_os = "windows")] {
                 let mut p = ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found");
-                if #has_app { p.push(APP_NAME); }
+                #app_push
                 p
             }
             #[cfg(not(target_os = "windows"))] {
                 let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found");
-                if #has_app { p.push(::std::format!(".{}", APP_NAME)); }
+                #app_push
                 p
             }
         },
@@ -316,19 +322,19 @@ fn try_parse_static_path(path_str: &str) -> Option<TokenStream2> {
             #[cfg(target_os = "windows")] {
                 let mut p = ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found");
                 p.push(".ssh");
-                if #has_app { p.push(APP_NAME); }
+                #app_push
                 p
             }
             #[cfg(target_os = "macos")] {
                 let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found");
                 p.push(".ssh");
-                if #has_app { p.push(APP_NAME); }
+                #app_push
                 p
             }
             #[cfg(all(unix, not(target_os = "macos")))] {
                 let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found");
                 p.push(".ssh");
-                if #has_app { p.push(::std::format!(".{}", APP_NAME)); }
+                #app_push
                 p
             }
         },
@@ -458,7 +464,7 @@ fn try_parse_static_path(path_str: &str) -> Option<TokenStream2> {
         "videos" => quote! {{
             let mut p = {
                 #[cfg(target_os = "windows")] { ::std::env::var("USERPROFILE").map(::std::path::PathBuf::from).expect("USERPROFILE not found") }
-                #[cfg(not(target_os = "windows"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
+                #[cfg(not(target_os = "macos"))] { ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found") }
             };
             #[cfg(target_os = "macos")] { p.push("Movies"); }
             #[cfg(not(target_os = "macos"))] { p.push("Videos"); }
@@ -468,14 +474,15 @@ fn try_parse_static_path(path_str: &str) -> Option<TokenStream2> {
         _ => panic!("Unknown path prefix: ${}", key),
     };
 
-    let rest_str = rest.to_string();
-    Some(quote! {{
+    let rest_expr = make_rest_expr(rest);
+    quote! {{
         let mut base = { #base_tokens };
-        if !#rest_str.is_empty() {
-            base.push(#rest_str);
+        let rest = #rest_expr;
+        if !rest.is_empty() {
+            base.push(rest);
         }
         base
-    }})
+    }}
 }
 
 struct Format {

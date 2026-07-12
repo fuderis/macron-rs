@@ -84,3 +84,77 @@ fn test_from_path() {
 
     assert_eq!(path!(dynamic_target.to_string_lossy()), expected);
 }
+
+#[test]
+fn test_path_formatting() {
+    let home = if cfg!(target_os = "windows") {
+        std::env::var("USERPROFILE").unwrap()
+    } else {
+        std::env::var("HOME").unwrap()
+    };
+
+    let folder = "projects";
+    let file = "main.rs";
+    let expected_home = PathBuf::from(&home).join(folder).join(file);
+
+    assert_eq!(path!("~/{}/{}", folder, file), expected_home);
+
+    let service = "database";
+    let ext = "yaml";
+
+    let mut expected_config = {
+        #[cfg(target_os = "windows")]
+        {
+            PathBuf::from(std::env::var("APPDATA").unwrap())
+                .join(APP_NAME)
+                .join("config")
+        }
+        #[cfg(target_os = "macos")]
+        {
+            PathBuf::from(&home)
+                .join("Library/Application Support")
+                .join(APP_NAME)
+        }
+        #[cfg(all(unix, not(target_os = "macos")))]
+        {
+            std::env::var("XDG_CONFIG_HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| PathBuf::from(&home).join(".config"))
+                .join(APP_NAME)
+        }
+    };
+    expected_config = expected_config.join("v1").join("database.yaml");
+
+    assert_eq!(
+        path!(
+            "$config$/v1/{name}.{extension}",
+            name = service,
+            extension = ext
+        ),
+        expected_config
+    );
+
+    let user_id = 1337;
+    let mut expected_cache = {
+        #[cfg(target_os = "windows")]
+        {
+            PathBuf::from(std::env::var("LOCALAPPDATA").unwrap())
+                .join(APP_NAME)
+                .join("cache")
+        }
+        #[cfg(target_os = "macos")]
+        {
+            PathBuf::from(&home).join("Library/Caches").join(APP_NAME)
+        }
+        #[cfg(all(unix, not(target_os = "macos")))]
+        {
+            std::env::var("XDG_CACHE_HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| PathBuf::from(&home).join(".cache"))
+                .join(APP_NAME)
+        }
+    };
+    expected_cache = expected_cache.join("user_1337").join("avatar.png");
+
+    assert_eq!(path!("$cache$/user_{user_id}/avatar.png"), expected_cache);
+}
