@@ -25,7 +25,7 @@ pub fn path(input: TokenStream) -> TokenStream {
     quote! {{
         let path_owner = #expr;
         let path_str: &str = path_owner.as_ref();
-        
+
         if path_str.starts_with('$') || path_str.starts_with('~') {
             let mut path_normalized = path_str.replace("\\", "/");
 
@@ -130,6 +130,25 @@ pub fn path(input: TokenStream) -> TokenStream {
                             p
                         }
                     }
+                    "state" => {
+                        #[cfg(target_os = "windows")] {
+                            let mut p = ::std::env::var("LOCALAPPDATA").map(::std::path::PathBuf::from).expect("LOCALAPPDATA not found");
+                            if has_app { p.push(APP_NAME); p.push("state"); }
+                            p
+                        }
+                        #[cfg(target_os = "macos")] {
+                            let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found").join("Library/Application Support");
+                            if has_app { p.push(APP_NAME); }
+                            p
+                        }
+                        #[cfg(all(unix, not(target_os = "macos")))] {
+                            let mut p = ::std::env::var("XDG_STATE_HOME").map(::std::path::PathBuf::from)
+                                .or_else(|_| ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/state")))
+                                .expect("Failed to resolve state directory");
+                            if has_app { p.push(APP_NAME); }
+                            p
+                        }
+                    }
                     "cache" => {
                         #[cfg(target_os = "windows")] {
                             let mut p = ::std::env::var("LOCALAPPDATA").map(::std::path::PathBuf::from).expect("LOCALAPPDATA not found");
@@ -153,49 +172,6 @@ pub fn path(input: TokenStream) -> TokenStream {
                         let mut p = ::std::env::temp_dir();
                         if has_app { p.push(APP_NAME); }
                         p
-                    }
-                    "global" => {
-                        #[cfg(target_os = "windows")] {
-                            let global_p = ::std::env::var("PROGRAMFILES").map(::std::path::PathBuf::from).expect("PROGRAMFILES not found");
-                            let local_p = ::std::env::var("LOCALAPPDATA").map(|l| ::std::path::PathBuf::from(l).join("Programs")).expect("LOCALAPPDATA not found");
-                            if has_app {
-                                let mut p = global_p.join(APP_NAME);
-                                if p.exists() { p } else { local_p.join(APP_NAME) }
-                            } else { global_p }
-                        }
-                        #[cfg(target_os = "macos")] {
-                            let global_p = ::std::path::PathBuf::from("/Applications");
-                            let local_p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join("Applications")).expect("HOME not found");
-                            if has_app {
-                                let mut p = global_p.join(APP_NAME);
-                                if p.exists() || global_p.join(::std::format!("{}.app", APP_NAME)).exists() { p } else { local_p.join(APP_NAME) }
-                            } else { global_p }
-                        }
-                        #[cfg(all(unix, not(target_os = "macos")))] {
-                            let global_p = ::std::path::PathBuf::from("/opt");
-                            let local_p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/opt")).expect("HOME not found");
-                            if has_app {
-                                let mut p = global_p.join(APP_NAME);
-                                if p.exists() { p } else { local_p.join(APP_NAME) }
-                            } else { global_p }
-                        }
-                    }
-                    "local" => {
-                        #[cfg(target_os = "windows")] {
-                            let mut p = ::std::env::var("LOCALAPPDATA").map(|l| ::std::path::PathBuf::from(l).join("Programs")).expect("LOCALAPPDATA not found");
-                            if has_app { p.push(APP_NAME); }
-                            p
-                        }
-                        #[cfg(target_os = "macos")] {
-                            let mut p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join("Applications")).expect("HOME not found");
-                            if has_app { p.push(APP_NAME); }
-                            p
-                        }
-                        #[cfg(all(unix, not(target_os = "macos")))] {
-                            let mut p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/opt")).expect("HOME not found");
-                            if has_app { p.push(APP_NAME); }
-                            p
-                        }
                     }
                     "downloads" | "documents" | "music" | "pictures" => {
                         let dir_name = match key {
@@ -376,6 +352,25 @@ fn parse_literal_path(lit_str: &syn::LitStr, args: Option<TokenStream2>) -> Toke
                 p
             }
         },
+        "state" => quote! {
+            #[cfg(target_os = "windows")] {
+                let mut p = ::std::env::var("LOCALAPPDATA").map(::std::path::PathBuf::from).expect("LOCALAPPDATA not found");
+                if #has_app { p.push(APP_NAME); p.push("state"); }
+                p
+            }
+            #[cfg(target_os = "macos")] {
+                let mut p = ::std::env::var("HOME").map(::std::path::PathBuf::from).expect("HOME not found").join("Library/Application Support");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+            #[cfg(all(unix, not(target_os = "macos")))] {
+                let mut p = ::std::env::var("XDG_STATE_HOME").map(::std::path::PathBuf::from)
+                    .or_else(|_| ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/state")))
+                    .expect("Failed to resolve state directory");
+                if #has_app { p.push(APP_NAME); }
+                p
+            }
+        },
         "cache" => quote! {
             #[cfg(target_os = "windows")] {
                 let mut p = ::std::env::var("LOCALAPPDATA").map(::std::path::PathBuf::from).expect("LOCALAPPDATA not found");
@@ -400,49 +395,6 @@ fn parse_literal_path(lit_str: &syn::LitStr, args: Option<TokenStream2>) -> Toke
             if #has_app { p.push(APP_NAME); }
             p
         }},
-        "global" => quote! {
-            #[cfg(target_os = "windows")] {
-                let global_p = ::std::env::var("PROGRAMFILES").map(::std::path::PathBuf::from).expect("PROGRAMFILES not found");
-                let local_p = ::std::env::var("LOCALAPPDATA").map(|l| ::std::path::PathBuf::from(l).join("Programs")).expect("LOCALAPPDATA not found");
-                if #has_app {
-                    let mut p = global_p.join(APP_NAME);
-                    if p.exists() { p } else { local_p.join(APP_NAME) }
-                } else { global_p }
-            }
-            #[cfg(target_os = "macos")] {
-                let global_p = ::std::path::PathBuf::from("/Applications");
-                let local_p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join("Applications")).expect("HOME not found");
-                if #has_app {
-                    let mut p = global_p.join(APP_NAME);
-                    if p.exists() || global_p.join(::std::format!("{}.app", APP_NAME)).exists() { p } else { local_p.join(APP_NAME) }
-                } else { global_p }
-            }
-            #[cfg(all(unix, not(target_os = "macos")))] {
-                let global_p = ::std::path::PathBuf::from("/opt");
-                let local_p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/opt")).expect("HOME not found");
-                if #has_app {
-                    let mut p = global_p.join(APP_NAME);
-                    if p.exists() { p } else { local_p.join(APP_NAME) }
-                } else { global_p }
-            }
-        },
-        "local" => quote! {
-            #[cfg(target_os = "windows")] {
-                let mut p = ::std::env::var("LOCALAPPDATA").map(|l| ::std::path::PathBuf::from(l).join("Programs")).expect("LOCALAPPDATA not found");
-                if #has_app { p.push(APP_NAME); }
-                p
-            }
-            #[cfg(target_os = "macos")] {
-                let mut p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join("Applications")).expect("HOME not found");
-                if #has_app { p.push(APP_NAME); }
-                p
-            }
-            #[cfg(all(unix, not(target_os = "macos")))] {
-                let mut p = ::std::env::var("HOME").map(|h| ::std::path::PathBuf::from(h).join(".local/opt")).expect("HOME not found");
-                if #has_app { p.push(APP_NAME); }
-                p
-            }
-        },
         "downloads" | "documents" | "music" | "pictures" => {
             let dir_name = match key {
                 "downloads" => "Downloads",

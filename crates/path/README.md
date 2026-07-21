@@ -34,8 +34,6 @@ Dynamic layouts tied directly to the location of the running binary.
 | :---      | :---                                     | :---                                                           |
 | `$`       | Exact path to the current running binary | `/path/to/bin/executable`                                      |
 | `$/`      | The directory containing the binary      | `/path/to/bin/`                                                |
-| `$global` | System global application home folder    | `/opt` / `/Applications` / `C:\Program Files`                  |
-| `$local`  | System local application home folder     | `~/.local/opt` / `~/Applications` / `%LOCALAPPDATA%\Programs`  |
 
 ### 2. System & Configuration Layouts (Isolated Contexts)
 
@@ -46,6 +44,7 @@ These targets are used for internal configuration, cache, and application runtim
 | `~`, `$home` | `/home/user`                         | `/Users/user`                   | `C:\Users\user`       |
 | `$config`    | `~/.config` (`XDG_CONFIG_HOME`)      | `~/Library/Application Support` | `%APPDATA%`           |
 | `$share`     | `~/.local/share` (`XDG_DATA_HOME`)   | `~/Library/Application Support` | `%LOCALAPPDATA%`      |
+| `$state`     | `~/.local/state` (`XDG_STATE_HOME`)  | `~/Library/Application Support` | `%LOCALAPPDATA%`      |
 | `$cache`     | `~/.cache` (`XDG_CACHE_HOME`)        | `~/Library/Caches`              | `%LOCALAPPDATA%`      |
 | `$temp`      | `/tmp`                               | `/tmp`                          | `%LOCALAPPDATA%\Temp` |
 
