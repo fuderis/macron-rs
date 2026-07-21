@@ -70,7 +70,7 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "macron"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "async-recursion",
  "macron-collections 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -80,7 +80,7 @@ dependencies = [
  "macron-impl-into 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "macron-input 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "macron-inputln 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "macron-path 0.3.1",
+ "macron-path 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "macron-regex 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "macron-str 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -243,9 +243,7 @@ dependencies = [
 
 [[package]]
 name = "macron-path"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01f41aec3a5fa8ecddb5c84cf58b2aeeede29dc86509a9f05733d54efabdc0f7"
+version = "0.3.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -255,6 +253,8 @@ dependencies = [
 [[package]]
 name = "macron-path"
 version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef61103a4139333d8775ea33ac1672f81ee48fc886961b96a64f96a929a611ca"
 dependencies = [
  "proc-macro2",
  "quote",
