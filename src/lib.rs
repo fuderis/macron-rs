@@ -29,5 +29,8 @@ pub use macron_impl_from::From;
 #[cfg(feature = "derive")]
 pub use macron_impl_into::Into;
 
-#[cfg(feature = "async-recursion")]
+#[cfg(feature = "async")]
 pub use async_recursion::async_recursion;
+
+#[cfg(feature = "async")]
+pub use async_trait::async_trait;
