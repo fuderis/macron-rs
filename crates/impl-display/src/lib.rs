@@ -8,7 +8,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields};
 struct ContainerReceiver {
     ident: syn::Ident,
     #[darling(default)]
-    rename: Option<String>,
+    rename_all: Option<String>,
     #[darling(default)]
     fmt: Option<String>,
 }
@@ -20,7 +20,7 @@ struct VariantReceiver {
     #[allow(dead_code)]
     fields: darling::ast::Fields<darling::util::Ignored>,
     #[darling(default)]
-    rename: Option<String>,
+    rename_all: Option<String>,
     #[darling(default)]
     fmt: Option<String>,
 }
@@ -97,7 +97,7 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                     }
                 }
             } else {
-                let name = apply_rename(&ident.to_string(), container.rename.as_deref());
+                let name = apply_rename(&ident.to_string(), container.rename_all.as_deref());
                 quote! { write!(f, #name) }
             }
         }
@@ -122,7 +122,10 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                         } else {
                             let name = apply_rename(
                                 &var_ident.to_string(),
-                                var_ctx.rename.as_deref().or(container.rename.as_deref()),
+                                var_ctx
+                                    .rename_all
+                                    .as_deref()
+                                    .or(container.rename_all.as_deref()),
                             );
                             quote! { Self::#var_ident => write!(f, #name) }
                         }
@@ -146,7 +149,10 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                         } else {
                             let name = apply_rename(
                                 &var_ident.to_string(),
-                                var_ctx.rename.as_deref().or(container.rename.as_deref()),
+                                var_ctx
+                                    .rename_all
+                                    .as_deref()
+                                    .or(container.rename_all.as_deref()),
                             );
                             quote! { Self::#var_ident { .. } => write!(f, #name) }
                         }
@@ -179,7 +185,10 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                         } else {
                             let name = apply_rename(
                                 &var_ident.to_string(),
-                                var_ctx.rename.as_deref().or(container.rename.as_deref()),
+                                var_ctx
+                                    .rename_all
+                                    .as_deref()
+                                    .or(container.rename_all.as_deref()),
                             );
                             quote! { Self::#var_ident(..) => write!(f, #name) }
                         }
