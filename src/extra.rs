@@ -24,3 +24,12 @@ macro_rules! arc {
         ::std::sync::Arc::new($e)
     };
 }
+
+/// Tries to downcast dynamic type & compare it with `matches!()`.
+#[macro_export]
+macro_rules! matches_downcast {
+    ($err:expr, $pat:pat $(if $guard:expr)?) => {
+        $err.downcast_ref()
+            .map_or(false, |e| matches!(e, $pat $(if $guard)?))
+    };
+}
