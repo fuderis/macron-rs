@@ -45,7 +45,7 @@ assert_eq!(
 enum Animals {
     Dog,
 
-    Cat(&'static str'),
+    Cat(&'static str),
 
     #[display(fmt = "It's {0} tiger")]
     Tiger(&'static str, u8),
