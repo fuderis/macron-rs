@@ -1,34 +1,24 @@
-use darling::{FromDeriveInput, FromVariant};
-use proc_macro::TokenStream;
-use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
-
-#[derive(FromDeriveInput)]
-#[darling(attributes(display), forward_attrs(allow, doc))]
-struct ContainerReceiver {
-    ident: syn::Ident,
-    #[darling(default)]
-    rename_all: Option<String>,
-    #[darling(default)]
-    fmt: Option<String>,
-}
-
-#[derive(FromVariant)]
-#[darling(attributes(display))]
-struct VariantReceiver {
-    ident: syn::Ident,
-    #[allow(dead_code)]
-    fields: darling::ast::Fields<darling::util::Ignored>,
-    #[darling(default)]
-    rename_all: Option<String>,
-    #[darling(default)]
-    fmt: Option<String>,
-}
-
 use heck::{
     ToKebabCase, ToLowerCamelCase, ToPascalCase, ToShoutyKebabCase, ToShoutySnakeCase, ToSnakeCase,
     ToUpperCamelCase,
 };
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{
+    parse_macro_input, punctuated::Punctuated, token::Comma, Attribute, Data, DeriveInput, Expr,
+    Fields, Ident, Meta,
+};
+
+struct LetBinding {
+    ident: Ident,
+    expr: Expr,
+}
+
+struct DisplayAttr {
+    fmt: Option<String>,
+    rename_all: Option<String>,
+    lets: Vec<LetBinding>,
+}
 
 fn apply_rename(text: &str, style: Option<&str>) -> String {
     let Some(style) = style else {
@@ -49,36 +39,123 @@ fn apply_rename(text: &str, style: Option<&str>) -> String {
     }
 }
 
-fn read_legacy_attr(attrs: &[syn::Attribute]) -> Option<String> {
-    attrs
-        .iter()
-        .find(|attr| attr.path().is_ident("display"))
-        .and_then(|attr| {
-            if let syn::Meta::NameValue(meta) = &attr.meta {
-                if let syn::Expr::Lit(syn::ExprLit {
+fn parse_display_attrs(attrs: &[Attribute]) -> syn::Result<DisplayAttr> {
+    let mut result = DisplayAttr {
+        fmt: None,
+        rename_all: None,
+        lets: Vec::new(),
+    };
+
+    for attr in attrs {
+        if !attr.path().is_ident("display") {
+            continue;
+        }
+
+        match &attr.meta {
+            Meta::NameValue(nv) => {
+                if let Expr::Lit(syn::ExprLit {
                     lit: syn::Lit::Str(s),
                     ..
-                }) = &meta.value
+                }) = &nv.value
                 {
-                    return Some(s.value());
+                    result.fmt = Some(s.value());
+                } else {
+                    return Err(syn::Error::new_spanned(
+                        &nv.value,
+                        "expected string literal in #[display = \"...\"]",
+                    ));
                 }
             }
-            None
-        })
+
+            Meta::List(_) => {
+                let items = attr.parse_args_with(Punctuated::<Meta, Comma>::parse_terminated)?;
+                for meta in items {
+                    match meta {
+                        Meta::NameValue(nv) => {
+                            let Some(ident) = nv.path.get_ident() else {
+                                return Err(syn::Error::new_spanned(
+                                    &nv.path,
+                                    "expected identifier key in #[display(...)]",
+                                ));
+                            };
+
+                            if ident == "fmt" {
+                                if let Expr::Lit(syn::ExprLit {
+                                    lit: syn::Lit::Str(s),
+                                    ..
+                                }) = &nv.value
+                                {
+                                    result.fmt = Some(s.value());
+                                } else {
+                                    return Err(syn::Error::new_spanned(
+                                        &nv.value,
+                                        "`fmt` must be a string literal",
+                                    ));
+                                }
+                            } else if ident == "rename_all" {
+                                if let Expr::Lit(syn::ExprLit {
+                                    lit: syn::Lit::Str(s),
+                                    ..
+                                }) = &nv.value
+                                {
+                                    result.rename_all = Some(s.value());
+                                } else {
+                                    return Err(syn::Error::new_spanned(
+                                        &nv.value,
+                                        "`rename_all` must be a string literal",
+                                    ));
+                                }
+                            } else {
+                                result.lets.push(LetBinding {
+                                    ident: ident.clone(),
+                                    expr: nv.value,
+                                });
+                            }
+                        }
+                        other => {
+                            return Err(syn::Error::new_spanned(
+                                other,
+                                "expected `key = expr` inside #[display(...)]",
+                            ));
+                        }
+                    }
+                }
+            }
+
+            Meta::Path(path) => {
+                return Err(syn::Error::new_spanned(
+                    path,
+                    "unexpected bare #[display] attribute",
+                ));
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+fn emit_let_bindings(bindings: &[LetBinding]) -> proc_macro2::TokenStream {
+    let stmts = bindings.iter().map(|b| {
+        let ident = &b.ident;
+        let expr = &b.expr;
+        quote! { let #ident = #expr; }
+    });
+    quote! { #(#stmts)* }
 }
 
 #[proc_macro_derive(Display, attributes(display))]
 pub fn impl_display(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    let container = match ContainerReceiver::from_derive_input(&input) {
+    let container_attr = match parse_display_attrs(&input.attrs) {
         Ok(val) => val,
-        Err(err) => return err.write_errors().into(),
+        Err(err) => return err.to_compile_error().into(),
     };
 
-    let ident = &container.ident;
-    let legacy_fmt = read_legacy_attr(&input.attrs);
-    let container_fmt = container.fmt.or(legacy_fmt);
+    let ident = &input.ident;
+    let container_fmt = container_attr.fmt;
+    let container_rename_all = container_attr.rename_all;
+    let container_bindings = container_attr.lets;
 
     let body = match &input.data {
         Data::Struct(st) => {
@@ -88,16 +165,18 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                     .iter()
                     .filter_map(|f| f.ident.as_ref())
                     .collect::<Vec<_>>();
+                let lets = emit_let_bindings(&container_bindings);
 
                 quote! {
                     #[allow(unused_variables)]
                     {
                         #( let #field_names = &self.#field_names; )*
+                        #lets
                         write!(f, #fmt)
                     }
                 }
             } else {
-                let name = apply_rename(&ident.to_string(), container.rename_all.as_deref());
+                let name = apply_rename(&ident.to_string(), container_rename_all.as_deref());
                 quote! { write!(f, #name) }
             }
         }
@@ -106,27 +185,36 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
             let mut matches = Vec::new();
 
             for variant in &en.variants {
-                let var_ctx = match VariantReceiver::from_variant(variant) {
+                let var_attr = match parse_display_attrs(&variant.attrs) {
                     Ok(val) => val,
-                    Err(err) => return err.write_errors().into(),
+                    Err(err) => return err.to_compile_error().into(),
                 };
 
-                let var_ident = &var_ctx.ident;
-                let legacy_var_fmt = read_legacy_attr(&variant.attrs);
-                let var_fmt = var_ctx.fmt.or(legacy_var_fmt);
+                let var_ident = &variant.ident;
+                let var_fmt = var_attr.fmt;
+                let var_rename_all = var_attr.rename_all.or_else(|| container_rename_all.clone());
+                let var_bindings = var_attr.lets;
 
                 let match_arm = match &variant.fields {
                     Fields::Unit => {
                         if let Some(fmt) = var_fmt {
-                            quote! { Self::#var_ident => write!(f, #fmt) }
+                            let lets = emit_let_bindings(&var_bindings);
+                            if var_bindings.is_empty() {
+                                quote! { Self::#var_ident => write!(f, #fmt) }
+                            } else {
+                                quote! {
+                                    Self::#var_ident => {
+                                        #[allow(unused_variables)]
+                                        {
+                                            #lets
+                                            write!(f, #fmt)
+                                        }
+                                    }
+                                }
+                            }
                         } else {
-                            let name = apply_rename(
-                                &var_ident.to_string(),
-                                var_ctx
-                                    .rename_all
-                                    .as_deref()
-                                    .or(container.rename_all.as_deref()),
-                            );
+                            let name =
+                                apply_rename(&var_ident.to_string(), var_rename_all.as_deref());
                             quote! { Self::#var_ident => write!(f, #name) }
                         }
                     }
@@ -138,22 +226,19 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                             .filter_map(|f| f.ident.as_ref())
                             .collect::<Vec<_>>();
                         if let Some(fmt) = var_fmt {
+                            let lets = emit_let_bindings(&var_bindings);
                             quote! {
                                 Self::#var_ident { #(#args,)* .. } => {
                                     #[allow(unused_variables)]
                                     {
+                                        #lets
                                         write!(f, #fmt)
                                     }
                                 }
                             }
                         } else {
-                            let name = apply_rename(
-                                &var_ident.to_string(),
-                                var_ctx
-                                    .rename_all
-                                    .as_deref()
-                                    .or(container.rename_all.as_deref()),
-                            );
+                            let name =
+                                apply_rename(&var_ident.to_string(), var_rename_all.as_deref());
                             quote! { Self::#var_ident { .. } => write!(f, #name) }
                         }
                     }
@@ -172,10 +257,12 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                                 .map(|i| quote::format_ident!("_{}", i))
                                 .collect::<Vec<_>>();
 
+                            let lets = emit_let_bindings(&var_bindings);
                             quote! {
                                 Self::#var_ident(#(#args,)*) => {
                                     #[allow(unused_variables)]
                                     {
+                                        #lets
                                         write!(f, #fmt, #(#used_args),*)
                                     }
                                 }
@@ -183,13 +270,8 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                         } else if fields.unnamed.len() == 1 {
                             quote! { Self::#var_ident(ref arg) => write!(f, "{}", arg) }
                         } else {
-                            let name = apply_rename(
-                                &var_ident.to_string(),
-                                var_ctx
-                                    .rename_all
-                                    .as_deref()
-                                    .or(container.rename_all.as_deref()),
-                            );
+                            let name =
+                                apply_rename(&var_ident.to_string(), var_rename_all.as_deref());
                             quote! { Self::#var_ident(..) => write!(f, #name) }
                         }
                     }
@@ -207,7 +289,7 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
                 }
             }
         }
-        _ => panic!("Only structs and enums are supported"),
+        _ => panic!("Only structs and enums are supported."),
     };
 
     quote! {

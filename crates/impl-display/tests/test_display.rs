@@ -27,7 +27,7 @@ fn test_struct_display() {
 #[test]
 fn test_enum_display() {
     #[derive(Display)]
-    #[display(rename = "lowercase")]
+    #[display(rename_all = "lowercase")]
     enum Animals {
         Dog,
 
@@ -53,5 +53,67 @@ fn test_enum_display() {
         }
         .to_string(),
         "It's Kesha bird"
+    );
+}
+
+#[test]
+fn test_let_bindings_display() {
+    #[derive(Display)]
+    #[display(
+        fmt = "{a} {b}",
+        a = "bla-bla",
+        b = opt.as_deref().unwrap_or("-")
+    )]
+    struct Item {
+        opt: Option<String>,
+    }
+
+    assert_eq!(
+        Item {
+            opt: Some("ok".to_string())
+        }
+        .to_string(),
+        "bla-bla ok"
+    );
+    assert_eq!(Item { opt: None }.to_string(), "bla-bla -");
+
+    #[derive(Display)]
+    enum LogEntry {
+        #[display(
+            fmt = "[{level}] {msg}",
+            level = if *_1 { "WARN" } else { "INFO" },
+            msg = _0.trim()
+        )]
+        Message(String, bool),
+
+        #[display(
+            fmt = "{0}",
+            _0 = _0.to_uppercase()
+        )]
+        Code(String),
+
+        #[display(
+            fmt = "{user} ({status})",
+            status = if *retries > 0 { "retry" } else { "fresh" }
+        )]
+        Job { user: &'static str, retries: u8 },
+    }
+
+    assert_eq!(
+        LogEntry::Message("  hello  ".to_string(), false).to_string(),
+        "[INFO] hello"
+    );
+    assert_eq!(
+        LogEntry::Message("disk full".to_string(), true).to_string(),
+        "[WARN] disk full"
+    );
+    assert_eq!(LogEntry::Code("err_404".to_string()).to_string(), "ERR_404");
+    assert_eq!(
+        LogEntry::Job {
+            user: "alice",
+            retries: 2,
+        }
+        .to_string(),
+        "alice (retry)"
     );
 }

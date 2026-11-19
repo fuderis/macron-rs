@@ -41,7 +41,7 @@ assert_eq!(
 ### Enum
 ```rust
 #[derive(Display)]
-#[display(rename = "lowercase")]
+#[display(rename_all = "lowercase")]
 enum Animals {
     Dog,
 
