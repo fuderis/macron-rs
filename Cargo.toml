@@ -3,7 +3,7 @@ name = "macron"
 description = "Comprehensive Rust macros toolkit for everyday development tasks. Includes convenient string formatting (str!), regex pattern matching (re!), streamlined collection creation, and custom derive macros for Display, Error, From, and Into traits. Boost your productivity with intuitive syntax and simplify your codebase while maintaining performance and safety. Perfect for both small projects and large-scale applications."
 keywords = ["macros", "macro", "proc", "derive", "declarative"]
 categories = ["development-tools", "rust-patterns"]
-version = "0.6.0"
+version = "0.6.1"
 license = "MIT"
 authors = ["Bulat Sh. <synapdrake@ya.ru>"]
 repository = "https://github.com/fuderis/macron-rs"
@@ -18,8 +18,9 @@ resolver = "3"
 [workspace.dependencies]
 proc-macro2 = "1.0.95"
 quote = "1.0.39"
-syn = { version = "2.0.100", features = ["parsing"] }
+syn = { version = "2.0.100", features = ["parsing", "full"] }
 darling = "0.23.0"
+heck = "0.5.0"
 
 [dependencies]
 macron-path = { version = "0.3.3", optional = true }
