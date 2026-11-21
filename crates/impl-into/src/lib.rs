@@ -61,7 +61,6 @@ pub fn impl_into(input: TokenStream) -> TokenStream {
         }
 
         syn::Data::Enum(en) => {
-            // Карта: Ключ = Целевой тип, Значение = (syn::Type, Vec<MatchArm>)
             let mut target_types: HashMap<String, (syn::Type, Vec<TokenStream2>)> = HashMap::new();
 
             for variant in &en.variants {
@@ -73,7 +72,6 @@ pub fn impl_into(input: TokenStream) -> TokenStream {
 
                 let var_ident = &variant.ident;
 
-                // Собираем токены для деструктуризации текущего варианта
                 let match_pattern = match &variant.fields {
                     syn::Fields::Named(fields_named) => {
                         let idents = fields_named.named.iter().map(|f| &f.ident);
@@ -87,7 +85,6 @@ pub fn impl_into(input: TokenStream) -> TokenStream {
                     syn::Fields::Unit => quote! { Self::#var_ident },
                 };
 
-                // Создаем биндинг переменной `value`
                 let binding = match &variant.fields {
                     syn::Fields::Named(fields_named) if fields_named.named.len() == 1 => {
                         let id = &fields_named.named[0].ident;
@@ -99,7 +96,6 @@ pub fn impl_into(input: TokenStream) -> TokenStream {
                     _ => quote! {},
                 };
 
-                // ЕСЛИ АТРИБУТОВ НЕТ: Проверяем на авто-Into (ровно 1 поле)
                 if parsed_attrs.is_empty() && variant.fields.len() == 1 {
                     let field = variant.fields.iter().next().unwrap();
                     let ty = &field.ty;
@@ -118,7 +114,6 @@ pub fn impl_into(input: TokenStream) -> TokenStream {
                         .1
                         .push(arm);
                 } else {
-                    // ЕСЛИ АТРИБУТЫ ЕСТЬ: Обрабатываем каждый
                     for attr in parsed_attrs {
                         if let AttrValue::Custom { ty, expr } = attr {
                             let ty_string = quote! { #ty }.to_string();
@@ -161,7 +156,7 @@ pub fn impl_into(input: TokenStream) -> TokenStream {
             .into()
         }
 
-        _ => panic!("Expected a 'struct' or 'enum'"),
+        _ => panic!("Expected a `struct` or `enum`."),
     }
 }
 
