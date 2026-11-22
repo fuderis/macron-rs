@@ -160,20 +160,43 @@ pub fn impl_display(input: TokenStream) -> TokenStream {
     let body = match &input.data {
         Data::Struct(st) => {
             if let Some(fmt) = container_fmt {
-                let field_names = st
+                let field_bindings = st
                     .fields
                     .iter()
-                    .filter_map(|f| f.ident.as_ref())
+                    .enumerate()
+                    .filter_map(|(_i, f)| {
+                        f.ident.as_ref().map(|ident| {
+                            quote! { let #ident = &self.#ident; }
+                        })
+                    })
                     .collect::<Vec<_>>();
+
+                let positional_args: Vec<_> = match &st.fields {
+                    Fields::Unnamed(fields) => (0..fields.unnamed.len())
+                        .map(|i| {
+                            let idx = syn::Index::from(i);
+                            quote! { &self.#idx }
+                        })
+                        .collect(),
+                    _ => Vec::new(),
+                };
+
                 let lets = emit_let_bindings(&container_bindings);
 
                 quote! {
                     #[allow(unused_variables)]
                     {
-                        #( let #field_names = &self.#field_names; )*
+                        #(#field_bindings)*
                         #lets
-                        write!(f, #fmt)
+                        write!(f, #fmt #(, #positional_args)*)
                     }
+                }
+            } else if let Fields::Unnamed(fields) = &st.fields {
+                if fields.unnamed.len() == 1 {
+                    quote! { write!(f, "{}", &self.0) }
+                } else {
+                    let name = apply_rename(&ident.to_string(), container_rename_all.as_deref());
+                    quote! { write!(f, #name) }
                 }
             } else {
                 let name = apply_rename(&ident.to_string(), container_rename_all.as_deref());

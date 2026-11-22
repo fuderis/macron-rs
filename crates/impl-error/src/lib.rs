@@ -55,7 +55,7 @@ pub fn impl_error(input: TokenStream) -> TokenStream {
                     
                             match src_field {
                                 Some(field) if is_option_type(&field.ty) => quote! { Self::#var_ident { source, .. } => source.as_deref().map(|e| e as &(dyn ::std::error::Error + 'static)) },
-                                Some(_) => quote! { Self::#var_ident { source, .. } => Some(&**source) }, // double deref для ссылки на Box в паттерн-матчинге
+                                Some(_) => quote! { Self::#var_ident { source, .. } => Some(&**source) },
                                 None => quote! { Self::#var_ident { .. } => None }
                             }
                         },
@@ -74,7 +74,7 @@ pub fn impl_error(input: TokenStream) -> TokenStream {
 
                             match src_field {
                                 Some((_, field)) if is_option_type(&field.ty) => quote! { Self::#var_ident(#(#stubs,)* source, ..) => source.as_deref().map(|e| e as &(dyn ::std::error::Error + 'static)) },
-                                Some(_) => quote! { Self::#var_ident(#(#stubs,)* source, ..) => Some(&**source) }, // double deref здесь, т.к. source в match — это &Box или &Type
+                                Some(_) => quote! { Self::#var_ident(#(#stubs,)* source, ..) => Some(&**source) },
                                 None => quote! { Self::#var_ident(..) => None }
                             }
                         },
@@ -96,7 +96,7 @@ pub fn impl_error(input: TokenStream) -> TokenStream {
             }.into()
         },
 
-        _ => panic!("the expected a 'struct' or 'enum'")
+        _ => panic!("the expected a `struct` or `enum`")
     }
 }
 

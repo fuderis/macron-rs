@@ -46,7 +46,7 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "macron-collections 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "macron-impl-display 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "macron-impl-display 0.4.1",
  "macron-impl-error 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "macron-impl-from 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "macron-impl-into 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -76,6 +76,8 @@ dependencies = [
 [[package]]
 name = "macron-impl-display"
 version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "393e9f27a7e855d825d71da316fdd38d898f9264f134686e2ddd08e6af011009"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -85,9 +87,7 @@ dependencies = [
 
 [[package]]
 name = "macron-impl-display"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "393e9f27a7e855d825d71da316fdd38d898f9264f134686e2ddd08e6af011009"
+version = "0.5.0"
 dependencies = [
  "heck",
  "proc-macro2",
