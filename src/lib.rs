@@ -5,9 +5,10 @@ pub mod extra;
 pub use macron_path::path;
 
 #[cfg(feature = "string")]
-pub use macron_regex::re;
-#[cfg(feature = "string")]
 pub use macron_str::str;
+
+#[cfg(feature = "regex")]
+pub use macron_regex::re;
 
 #[cfg(feature = "input")]
 pub use macron_input::input;
